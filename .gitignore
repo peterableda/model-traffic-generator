@@ -1,6 +1,10 @@
 # Environment variables
 .env
 
+# Vendored packages (keep caiiclient.tar.gz in repo)
+!vendor/
+!vendor/caiiclient.tar.gz
+
 # Python
 __pycache__/
 *.py[cod]

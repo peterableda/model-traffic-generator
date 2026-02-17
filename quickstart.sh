@@ -32,30 +32,21 @@ echo "Activating virtual environment..."
 source venv/bin/activate
 echo "✓ Virtual environment activated"
 
-# Check if caiiclient is installed
+# Install caiiclient if not already installed
 echo ""
 echo "Checking for caiiclient..."
 if ! python3 -c "import caiiclient" 2>/dev/null; then
-    echo "⚠️  caiiclient is not installed"
-    echo ""
-    echo "caiiclient must be installed before running this application."
-    echo ""
-    echo "Run the automated setup script first:"
-    echo "  ./setup.sh"
-    echo ""
-    echo "Or install manually:"
-    echo "  Option 1: Download from cluster"
-    echo "    curl -k https://\$CML_DOMAIN/api/v1alpha1/client/python --output caiiclient.tar.gz"
-    echo "    pip install caiiclient.tar.gz"
-    echo ""
-    echo "  Option 2: Generate locally"
-    echo "    cd ../../../"
-    echo "    make build-api-pythonlib"
-    echo "    pip install build/python-clients/out/caiiclient.tar.gz"
-    echo ""
-    exit 1
+    echo "Installing caiiclient from bundled package..."
+    if [ ! -f "vendor/caiiclient.tar.gz" ]; then
+        echo "⚠️  Error: vendor/caiiclient.tar.gz not found"
+        echo ""
+        echo "Please ensure the vendor directory contains caiiclient.tar.gz"
+        exit 1
+    fi
+    pip install -q vendor/caiiclient.tar.gz
+    echo "✓ caiiclient installed"
 else
-    echo "✓ caiiclient is installed"
+    echo "✓ caiiclient already installed"
 fi
 
 # Install dependencies

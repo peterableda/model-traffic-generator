@@ -36,38 +36,21 @@ fi
 PYTHON_VERSION=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
 print_success "Python $PYTHON_VERSION detected"
 
-# Find repository root
+# Get script directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-REPO_ROOT="$SCRIPT_DIR/../../.."
 
 echo ""
-echo "Looking for repository root..."
-if [ ! -f "$REPO_ROOT/Makefile" ]; then
-    print_error "Could not find repository Makefile"
-    echo "Expected location: $REPO_ROOT/Makefile"
+echo "Checking for bundled caiiclient..."
+if [ ! -f "$SCRIPT_DIR/vendor/caiiclient.tar.gz" ]; then
+    print_error "caiiclient package not found in vendor/"
     echo ""
-    echo "Please run this script from: examples/applications/model-traffic-generator/"
-    exit 1
-fi
-
-if ! grep -q "build-api-pythonlib" "$REPO_ROOT/Makefile" 2>/dev/null; then
-    print_error "Makefile does not contain build-api-pythonlib target"
-    exit 1
-fi
-
-print_success "Found repository root: $REPO_ROOT"
-
-# Check if make is installed
-if ! command -v make &> /dev/null; then
-    print_error "make is not installed"
+    echo "Expected location: $SCRIPT_DIR/vendor/caiiclient.tar.gz"
     echo ""
-    echo "Install make first:"
-    echo "  Ubuntu/Debian: sudo apt-get install build-essential"
-    echo "  macOS: xcode-select --install"
+    echo "Please ensure the vendor directory contains caiiclient.tar.gz"
     exit 1
 fi
 
-print_success "make is installed"
+print_success "Found bundled caiiclient package"
 
 # Check if virtual environment exists or create one
 echo ""
@@ -91,62 +74,18 @@ echo "Upgrading pip..."
 pip install -q --upgrade pip
 print_success "pip upgraded"
 
-# Check if caiiclient is already installed
-if python3 -c "import caiiclient" 2>/dev/null; then
-    print_warning "caiiclient is already installed"
-    read -p "Do you want to regenerate it? [y/N]: " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Skipping caiiclient generation"
-        SKIP_GENERATE=true
-    fi
-fi
+# Install caiiclient from vendor directory
+echo ""
+echo "Installing caiiclient from bundled package..."
+pip install "$SCRIPT_DIR/vendor/caiiclient.tar.gz"
+print_success "caiiclient installed"
 
-# Generate caiiclient from source
-if [ "$SKIP_GENERATE" != "true" ]; then
-    echo ""
-    echo "Generating caiiclient from source..."
-    echo "(This may take a few minutes - building Docker images and generating code)"
-    echo ""
-    
-    cd "$REPO_ROOT"
-    
-    # Run make build-api-pythonlib
-    if make build-api-pythonlib; then
-        print_success "Client generation complete"
-    else
-        print_error "Client generation failed"
-        echo ""
-        echo "This usually happens due to:"
-        echo "  - Docker not running"
-        echo "  - Missing dependencies"
-        echo "  - Network issues pulling Docker images"
-        echo ""
-        echo "Check the error messages above and try again."
-        exit 1
-    fi
-    
-    # Check if the generated file exists
-    if [ ! -f "$REPO_ROOT/build/python-clients/out/caiiclient.tar.gz" ]; then
-        print_error "Generated client not found at build/python-clients/out/caiiclient.tar.gz"
-        exit 1
-    fi
-    
-    cd "$SCRIPT_DIR"
-    
-    # Install caiiclient
-    echo ""
-    echo "Installing caiiclient..."
-    pip install "$REPO_ROOT/build/python-clients/out/caiiclient.tar.gz"
-    print_success "caiiclient installed"
-    
-    # Verify installation
-    if python3 -c "import caiiclient" 2>/dev/null; then
-        print_success "caiiclient verified"
-    else
-        print_error "caiiclient installation verification failed"
-        exit 1
-    fi
+# Verify installation
+if python3 -c "import caiiclient" 2>/dev/null; then
+    print_success "caiiclient verified"
+else
+    print_error "caiiclient installation verification failed"
+    exit 1
 fi
 
 # Install other dependencies

@@ -26,36 +26,33 @@ A Python application that automatically discovers model endpoints in CML Serving
 
 ### Setup
 
-**Important:** The `caiiclient` package must be installed first before installing other dependencies.
+The `caiiclient` package is **bundled in the `vendor/` directory**, so you don't need to download or generate it separately.
 
 #### Option 1: Automated Setup (Recommended)
 
-Automatically generates caiiclient from source and installs all dependencies:
+Installs caiiclient from vendor and all other dependencies:
 
 ```bash
-cd examples/applications/model-traffic-generator
 ./setup.sh
 ```
 
-#### Option 2: Manual Installation
+#### Option 2: Quick Start
 
-1. Download the CML Serving Python client:
+For a faster setup with automatic dependency installation:
 
 ```bash
-# Option A: Download from your cluster
-curl -k https://<DOMAIN>/api/v1alpha1/client/python --output caiiclient.tar.gz
-pip install caiiclient.tar.gz
-
-# Option B: Generate locally (requires repository and Docker)
-cd /path/to/cml-serving
-# From the repository root, run:
-./examples/applications/model-traffic-generator/setup.sh
+./quickstart.sh
 ```
 
-2. Install other dependencies:
+#### Option 3: Manual Installation
 
 ```bash
-cd examples/applications/model-traffic-generator
+# Create virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate  # On Linux/Mac
+# or: .\venv\Scripts\activate  # On Windows
+
+# Install all dependencies (including bundled caiiclient)
 pip install -r requirements.txt
 ```
 
