@@ -659,7 +659,7 @@ Examples:
             daemon=True,
         ).start()
         logger.info(f"Starting status server on port {app_port}")
-        HTTPServer(("0.0.0.0", int(app_port)), _make_status_handler(generator)).serve_forever()
+        HTTPServer(("127.0.0.1", int(app_port)), _make_status_handler(generator)).serve_forever()
     elif args.once:
         generator.run_once(namespace=args.namespace)
     else:
