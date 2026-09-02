@@ -651,14 +651,13 @@ Examples:
     )
 
     # Run
-    app_port = os.environ.get("CDSW_APP_PORT")
+    app_port = os.environ.get("CDSW_READONLY_PORT")
     if app_port:
-        t = threading.Thread(
+        threading.Thread(
             target=generator.run_continuous,
             kwargs={"namespace": args.namespace},
             daemon=True,
-        )
-        t.start()
+        ).start()
         logger.info(f"Starting status server on port {app_port}")
         HTTPServer(("0.0.0.0", int(app_port)), _make_status_handler(generator)).serve_forever()
     elif args.once:
