@@ -14,7 +14,10 @@ import logging
 import os
 import random
 import time
-from dataclasses import dataclass
+import threading
+from dataclasses import dataclass, field
+from datetime import datetime
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 
@@ -142,6 +145,16 @@ class TrafficGenerator:
             self.http_client = httpx.Client(timeout=30.0)
         else:
             self.http_client = httpx.Client(verify=False, timeout=30.0)
+
+        self._status_lock = threading.Lock()
+        self._status = {
+            "started": datetime.now().isoformat(),
+            "cycles": 0,
+            "last_cycle_at": None,
+            "last_success": 0,
+            "last_total": 0,
+            "state": "starting",
+        }
 
     def discover_endpoints(self, namespace: str = "serving-default") -> List[EndpointInfo]:
         """
@@ -454,23 +467,32 @@ class TrafficGenerator:
 
         while True:
             try:
-                # Discover endpoints
+                with self._status_lock:
+                    self._status["state"] = "discovering"
+
                 endpoints = self.discover_endpoints(namespace)
 
                 if not endpoints:
                     logger.warning("No running endpoints found")
+                    success_count, total = 0, 0
                 else:
-                    # Generate traffic for each endpoint
+                    with self._status_lock:
+                        self._status["state"] = "generating"
                     success_count = 0
                     for endpoint in endpoints:
                         if self.generate_traffic_for_endpoint(endpoint):
                             success_count += 1
-                        # Small delay between requests to avoid overwhelming the system
                         time.sleep(2)
+                    total = len(endpoints)
+                    logger.info(f"Traffic generation cycle complete: {success_count}/{total} successful")
 
-                    logger.info(f"Traffic generation cycle complete: {success_count}/{len(endpoints)} successful")
+                with self._status_lock:
+                    self._status["cycles"] += 1
+                    self._status["last_cycle_at"] = datetime.now().isoformat()
+                    self._status["last_success"] = success_count
+                    self._status["last_total"] = total
+                    self._status["state"] = "waiting"
 
-                # Wait before next cycle
                 logger.info(f"Waiting {self.interval} seconds before next cycle...")
                 time.sleep(self.interval)
 
@@ -504,6 +526,33 @@ class TrafficGenerator:
             time.sleep(2)
 
         logger.info(f"Cycle complete: {success_count}/{len(endpoints)} successful")
+
+
+def _make_status_handler(generator):
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            with generator._status_lock:
+                s = dict(generator._status)
+            body = f"""<!doctype html><html><head><title>Traffic Generator</title>
+<meta http-equiv="refresh" content="30"></head><body>
+<h2>Model Traffic Generator</h2>
+<table>
+<tr><td>Started</td><td>{s['started']}</td></tr>
+<tr><td>State</td><td>{s['state']}</td></tr>
+<tr><td>Cycles completed</td><td>{s['cycles']}</td></tr>
+<tr><td>Last cycle</td><td>{s['last_cycle_at'] or 'pending'}</td></tr>
+<tr><td>Last result</td><td>{s['last_success']}/{s['last_total']} endpoints OK</td></tr>
+</table></body></html>""".encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    return Handler
 
 
 def main():
@@ -602,7 +651,17 @@ Examples:
     )
 
     # Run
-    if args.once:
+    app_port = os.environ.get("CDSW_APP_PORT")
+    if app_port:
+        t = threading.Thread(
+            target=generator.run_continuous,
+            kwargs={"namespace": args.namespace},
+            daemon=True,
+        )
+        t.start()
+        logger.info(f"Starting status server on port {app_port}")
+        HTTPServer(("0.0.0.0", int(app_port)), _make_status_handler(generator)).serve_forever()
+    elif args.once:
         generator.run_once(namespace=args.namespace)
     else:
         generator.run_continuous(namespace=args.namespace)
