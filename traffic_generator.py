@@ -579,7 +579,7 @@ Examples:
         help="Enable debug logging"
     )
 
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
 
     # Set logging level
     if args.debug:
@@ -609,8 +609,5 @@ Examples:
 
 
 if __name__ == "__main__":
-    import sys
-    # Strip Jupyter kernel arguments so argparse doesn't choke when run in a notebook
-    sys.argv = [a for a in sys.argv if not a.startswith('/tmp/jupyter')]
     main()
 
