@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 
-import caiiclient
+from cloudera.ai.inference import create_client, ServingListEndpointsRequest
 import httpx
 from openai import OpenAI
 
@@ -131,17 +131,11 @@ class TrafficGenerator:
         self.max_tokens = max_tokens
         
         # Setup API client for discovery
-        config = caiiclient.Configuration()
-        config.host = f"https://{domain}"
-        config.verify_ssl = verify_ssl
-
-        api_client = caiiclient.ApiClient(
-            configuration=config,
-            header_name="Authorization",
-            header_value=f"Bearer {cdp_token}",
+        self.serving_api = create_client(
+            host=f"https://{domain}",
+            token=cdp_token,
+            verify_ssl=verify_ssl,
         )
-
-        self.serving_api = caiiclient.ServingApi(api_client=api_client)
 
         # Setup HTTP client for requests
         if verify_ssl:
@@ -162,7 +156,7 @@ class TrafficGenerator:
         logger.info(f"Discovering endpoints in namespace: {namespace}")
 
         try:
-            req = caiiclient.ServingListEndpointsRequest(namespace=namespace)
+            req = ServingListEndpointsRequest(namespace=namespace)
             response = self.serving_api.serving_list_endpoints(req)
 
             endpoints = []
