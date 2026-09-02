@@ -611,6 +611,6 @@ Examples:
 if __name__ == "__main__":
     import sys
     # Strip Jupyter kernel arguments so argparse doesn't choke when run in a notebook
-    sys.argv = [sys.argv[0]] + [a for a in sys.argv[1:] if not a.startswith('-f')]
+    sys.argv = [a for a in sys.argv if not a.startswith('/tmp/jupyter')]
     main()
 
