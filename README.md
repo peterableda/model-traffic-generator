@@ -20,25 +20,19 @@ A Python application that automatically discovers model endpoints in CML Serving
 
 ### Prerequisites
 
-1. Python 3.8 or higher
+1. Python 3.9 or higher
 2. Access to a CML Serving cluster
 3. CDP authentication token
 
 ### Setup
 
-The `caiiclient` package is **bundled in the `vendor/` directory**, so you don't need to download or generate it separately.
-
 #### Option 1: Automated Setup (Recommended)
-
-Installs caiiclient from vendor and all other dependencies:
 
 ```bash
 ./setup.sh
 ```
 
 #### Option 2: Quick Start
-
-For a faster setup with automatic dependency installation:
 
 ```bash
 ./quickstart.sh
@@ -52,7 +46,6 @@ python3 -m venv venv
 source venv/bin/activate  # On Linux/Mac
 # or: .\venv\Scripts\activate  # On Windows
 
-# Install all dependencies (including bundled caiiclient)
 pip install -r requirements.txt
 ```
 
@@ -207,40 +200,16 @@ sudo systemctl status traffic-generator
 
 ### Using Docker
 
-**Note:** Docker deployment requires `caiiclient` to be pre-installed. You can create a custom Dockerfile that:
-
-1. Downloads `caiiclient` from your cluster or generates it from source
-2. Installs remaining dependencies from `requirements.txt`
-3. Copies `traffic_generator.py`
-
-Example multi-stage Dockerfile:
+Example Dockerfile:
 
 ```dockerfile
-FROM python:3.11-slim as builder
-
-WORKDIR /app
-
-# Download caiiclient from your cluster (replace <DOMAIN>)
-ARG CDP_TOKEN
-ARG CML_DOMAIN
-RUN apt-get update && apt-get install -y curl && \
-    curl -k -H "Authorization: Bearer ${CDP_TOKEN}" \
-    "https://${CML_DOMAIN}/api/v1alpha1/client/python" \
-    --output caiiclient.tar.gz
-
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy and install caiiclient
-COPY --from=builder /app/caiiclient.tar.gz .
-RUN pip install --no-cache-dir caiiclient.tar.gz
-
-# Install other dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application
 COPY traffic_generator.py .
 
 ENTRYPOINT ["python", "traffic_generator.py"]
@@ -249,10 +218,8 @@ ENTRYPOINT ["python", "traffic_generator.py"]
 Build and run:
 
 ```bash
-docker build -t traffic-generator \
-  --build-arg CDP_TOKEN=$CDP_TOKEN \
-  --build-arg CML_DOMAIN=$CML_DOMAIN .
-  
+docker build -t traffic-generator .
+
 docker run -d \
   --name traffic-generator \
   -e CDP_TOKEN=your-token \
